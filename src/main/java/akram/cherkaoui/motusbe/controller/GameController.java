@@ -52,6 +52,7 @@ public class GameController {
         Game newGame = new Game();
         newGame.setDifficulty(difficulty);
         newGame.setUser(user);
+        newGame.setNumberOfAttempts(-1);
         Game savedGame = gameRepository.save(newGame);
 
         GameStartResponse response = new GameStartResponse();

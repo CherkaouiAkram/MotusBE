@@ -43,6 +43,9 @@ public class WallOfFameService {
     }
 
     public static boolean isGameWon(Game game) {
+        if (game.getNumberOfAttempts() == -1) {
+            return false;
+        }
         return switch (game.getDifficulty()) {
             case EASY -> game.getNumberOfAttempts() < 6;
             case MEDIUM -> game.getNumberOfAttempts() < 5;
