@@ -16,7 +16,7 @@ public class Game {
     @ManyToOne
     private User user;
 
-    private String numberOfAttempts;
+    private int numberOfAttempts;
 
     @Enumerated(EnumType.STRING)
     private Difficulty difficulty;
@@ -32,7 +32,7 @@ public class Game {
         return this.user;
     }
 
-    public String getNumberOfAttempts() {
+    public int getNumberOfAttempts() {
         return this.numberOfAttempts;
     }
 
@@ -48,7 +48,7 @@ public class Game {
         this.user = user;
     }
 
-    public void setNumberOfAttempts(String numberOfAttempts) {
+    public void setNumberOfAttempts(int numberOfAttempts) {
         this.numberOfAttempts = numberOfAttempts;
     }
 

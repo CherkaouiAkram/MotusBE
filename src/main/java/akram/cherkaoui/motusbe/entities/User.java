@@ -1,9 +1,6 @@
 package akram.cherkaoui.motusbe.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
 import java.util.UUID;
@@ -15,6 +12,7 @@ public class User {
     @Id
     @GeneratedValue(generator = "UUID")
     private UUID id;
+    @Column(unique = true)
     private String pseudo;
     private String email;
     private String password;
