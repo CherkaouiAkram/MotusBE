@@ -20,14 +20,15 @@ public class WordService {
         String pattern = "?".repeat(length);
         String url = UriComponentsBuilder.fromHttpUrl("https://api.datamuse.com/words")
                 .queryParam("sp", pattern)
-                .queryParam("max", 1)
+                .queryParam("max", 1000)
                 .toUriString();
 
         try {
             String json = restTemplate.getForObject(url, String.class);
             JsonNode arrayNode = objectMapper.readTree(json);
             if (arrayNode.isArray() && arrayNode.size() > 0) {
-                return arrayNode.get(0).get("word").asText();
+                int randomIndex = (int) (Math.random() * arrayNode.size());
+                return arrayNode.get(randomIndex).get("word").asText();
             }
         } catch (Exception e) {
             System.out.println("Error fetching word: " + e.getMessage());
