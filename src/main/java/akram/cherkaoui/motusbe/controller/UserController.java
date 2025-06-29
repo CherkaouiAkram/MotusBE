@@ -7,8 +7,6 @@ import akram.cherkaoui.motusbe.services.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
-
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
@@ -27,7 +25,8 @@ public class UserController {
             return ResponseEntity.badRequest().body("Invalid Authorization header");
         }
 
-        String token = authHeader.substring(7); // remove "Bearer "
+        String token = extractToken(authHeader);
+
         if (!jwtService.isTokenValid(token)) {
             return ResponseEntity.status(401).body("Invalid or expired token");
         }
@@ -36,11 +35,14 @@ public class UserController {
 
         User user = userRepository.findByEmail(email).get();
 
-        // You can return more info if you have a UserService
         UserInfoResponse userInfoResponse = new UserInfoResponse();
         userInfoResponse.setEmail(user.getEmail());
         userInfoResponse.setPseudo(user.getPseudo());
-        return ResponseEntity.ok().body(userInfoResponse);
+
+        return ResponseEntity.ok(userInfoResponse);
     }
 
+    private String extractToken(String authHeader) {
+        return authHeader.substring(7); // Removes "Bearer "
+    }
 }

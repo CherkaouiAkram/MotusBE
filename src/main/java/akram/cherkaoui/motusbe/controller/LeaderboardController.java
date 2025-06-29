@@ -5,11 +5,7 @@ import akram.cherkaoui.motusbe.entities.User;
 import akram.cherkaoui.motusbe.repositories.UserRepository;
 import akram.cherkaoui.motusbe.services.JwtService;
 import akram.cherkaoui.motusbe.services.LeaderboardService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -17,23 +13,29 @@ import java.util.List;
 @RequestMapping("/api/wallofFame")
 public class LeaderboardController {
 
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+    private final LeaderboardService leaderboardService;
 
-    @Autowired
-    private JwtService jwtService;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private LeaderboardService leaderboardService;
+    public LeaderboardController(JwtService jwtService,
+                                 UserRepository userRepository,
+                                 LeaderboardService leaderboardService) {
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
+        this.leaderboardService = leaderboardService;
+    }
 
     @GetMapping
     public List<LeaderboardEntryDTO> getLeaderboard(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7); // remove "Bearer "
-
-        String email = jwtService.extractEmail(token);
-
-        User user = userRepository.findByEmail(email).get();
-
-
+        User user = getUserFromAuthHeader(authHeader);
+        // You can use `user` for access control, logging, or personalized leaderboard if needed.
         return leaderboardService.getLeaderboardEntries();
+    }
+
+    private User getUserFromAuthHeader(String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        String email = jwtService.extractEmail(token);
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

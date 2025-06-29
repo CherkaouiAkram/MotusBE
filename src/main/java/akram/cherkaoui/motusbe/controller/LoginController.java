@@ -19,7 +19,9 @@ public class LoginController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public LoginController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public LoginController(UserRepository userRepository,
+                           PasswordEncoder passwordEncoder,
+                           JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -44,38 +46,37 @@ public class LoginController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         return userRepository.findByEmail(request.getEmail())
                 .map(user -> {
-                    if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                        String token = jwtService.generateToken(user.getEmail());
-                        return ResponseEntity.ok(new JwtResponse(token));
-                    } else {
+                    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
                     }
+                    String token = jwtService.generateToken(user.getEmail());
+                    return ResponseEntity.ok(new JwtResponse(token));
                 })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found"));
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<?> verify(@RequestBody VerifyRequest request){
-            boolean isValid = jwtService.isTokenValid(request.getToken());
-            if (isValid) {
-                return ResponseEntity.ok("Token is valid");
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
-            }
+    public ResponseEntity<String> verify(@RequestBody VerifyRequest request) {
+        boolean isValid = jwtService.isTokenValid(request.getToken());
+        return isValid
+                ? ResponseEntity.ok("Token is valid")
+                : ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
     }
 
+    // Inner DTO for JWT response
     public static class JwtResponse {
         private String token;
 
         public JwtResponse(String token) {
             this.token = token;
         }
+
         public String getToken() {
             return token;
         }
+
         public void setToken(String token) {
             this.token = token;
         }
     }
-
 }

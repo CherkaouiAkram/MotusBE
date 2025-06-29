@@ -11,85 +11,99 @@ import akram.cherkaoui.motusbe.repositories.UserRepository;
 import akram.cherkaoui.motusbe.services.JwtService;
 import akram.cherkaoui.motusbe.services.WallOfFameService;
 import akram.cherkaoui.motusbe.services.WordService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/games")
 public class GameController {
 
-    @Autowired
-    private WordService wordService;
-    @Autowired
-    private JwtService jwtService;
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private GameRepository gameRepository;
+    private final WordService wordService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+    private final GameRepository gameRepository;
+    private final WallOfFameService wallOfFameService;
 
-    @Autowired
-    private WallOfFameService wallOfFameService;
+    public GameController(WordService wordService,
+                          JwtService jwtService,
+                          UserRepository userRepository,
+                          GameRepository gameRepository,
+                          WallOfFameService wallOfFameService) {
+        this.wordService = wordService;
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
+        this.gameRepository = gameRepository;
+        this.wallOfFameService = wallOfFameService;
+    }
 
     @PostMapping("/start")
-    public ResponseEntity<GameStartResponse> startGame(@RequestBody GameStartRequest request, @RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<GameStartResponse> startGame(@RequestBody GameStartRequest request,
+                                                       @RequestHeader("Authorization") String authHeader) {
+        User user = getUserFromAuthHeader(authHeader);
 
-        String token = authHeader.substring(7); // remove "Bearer "
-
-        String email = jwtService.extractEmail(token);
-
-        User user = userRepository.findByEmail(email).get();
-
-        int length = 5;
-
-        length = switch (Difficulty.valueOf(request.getDifficulty().toUpperCase())){
-            case EASY -> 4;
-            case MEDIUM -> 5;
-            case HARD -> 6;
-        };
+        Difficulty difficulty = Difficulty.valueOf(request.getDifficulty().toUpperCase());
+        int length = getWordLengthByDifficulty(difficulty);
 
         String theWord = wordService.getRandomWordByLength(length);
 
-
         Game newGame = new Game();
-        newGame.setDifficulty(Difficulty.valueOf(request.getDifficulty().toUpperCase()));
+        newGame.setDifficulty(difficulty);
         newGame.setUser(user);
         Game savedGame = gameRepository.save(newGame);
 
         GameStartResponse response = new GameStartResponse();
         response.setGameId(savedGame.getId().toString());
         response.setWord(theWord.toUpperCase());
+
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/end")
-    public ResponseEntity<?> endGame(@RequestBody GameEndRequest request, @RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.substring(7);
+    public ResponseEntity<?> endGame(@RequestBody GameEndRequest request,
+                                     @RequestHeader("Authorization") String authHeader) {
+        User user = getUserFromAuthHeader(authHeader);
 
-        String email = jwtService.extractEmail(token);
+        UUID gameId = UUID.fromString(request.getGameId());
+        Optional<Game> optionalGame = gameRepository.findById(gameId);
 
-        User user = userRepository.findByEmail(email).get();
+        if (optionalGame.isEmpty()) {
+            return ResponseEntity.badRequest().body("Game not found");
+        }
 
-        Game game = gameRepository.findById(UUID.fromString(request.getGameId())).get();
-
-        game.setNumberOfAttempts(Integer.parseInt(request.getNbAttempts()));
-
+        Game game = optionalGame.get();
+        int attempts = Integer.parseInt(request.getNbAttempts());
+        game.setNumberOfAttempts(attempts);
         gameRepository.save(game);
 
+        // Update user's streak
         if (WallOfFameService.isGameWon(game)) {
-            int oldStrike = user.getCurrentStrike();
-            int oldBestStrike = user.getBestStrike();
-
-            user.setCurrentStrike(oldStrike + 1);
-            if (!(oldBestStrike > (oldStrike +1))) user.setBestStrike(oldStrike +1);
+            int current = user.getCurrentStrike() + 1;
+            user.setCurrentStrike(current);
+            user.setBestStrike(Math.max(current, user.getBestStrike()));
         } else {
             user.setCurrentStrike(0);
         }
 
         wallOfFameService.updateUserScore(user);
         userRepository.save(user);
+
         return ResponseEntity.ok().build();
+    }
+
+    private User getUserFromAuthHeader(String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        String email = jwtService.extractEmail(token);
+        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    private int getWordLengthByDifficulty(Difficulty difficulty) {
+        return switch (difficulty) {
+            case EASY -> 4;
+            case MEDIUM -> 5;
+            case HARD -> 6;
+        };
     }
 }
