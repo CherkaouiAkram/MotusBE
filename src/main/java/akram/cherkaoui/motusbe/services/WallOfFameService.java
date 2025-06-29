@@ -47,9 +47,9 @@ public class WallOfFameService {
             return false;
         }
         return switch (game.getDifficulty()) {
-            case EASY -> game.getNumberOfAttempts() < 6;
-            case MEDIUM -> game.getNumberOfAttempts() < 5;
-            case HARD -> game.getNumberOfAttempts() < 4;
+            case EASY -> game.getNumberOfAttempts() < 7;
+            case MEDIUM -> game.getNumberOfAttempts() < 6;
+            case HARD -> game.getNumberOfAttempts() < 5;
         };
     }
 }
